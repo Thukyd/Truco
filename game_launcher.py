@@ -11,9 +11,14 @@ import time
 import random
 from typing import List, Dict, Any, Optional
 
+# Global settings - defined at module level
+ENABLE_COLORS = True
+SCREEN_WIDTH = 80
+SCROLL_DELAY = 0.5
+
 # Import the restructured module
 try:
-    from truco import TrucoGame, DisplayManager, TerminalColors, SCREEN_WIDTH
+    from truco import TrucoGame, DisplayManager, TerminalColors
     from card_learning_system import TrucoCardTrainer
 except ImportError:
     print("Error: Required modules not found.")
@@ -141,6 +146,9 @@ class TrucoLauncher:
     
     def show_settings(self):
         """Display and modify game settings"""
+        # Declare globals at the beginning of the function
+        global ENABLE_COLORS, SCREEN_WIDTH, SCROLL_DELAY
+        
         self.display_manager.clear_screen()
         
         self.display_manager.section("GAME SETTINGS", color=TerminalColors.BRIGHT_CYAN)
@@ -156,7 +164,6 @@ class TrucoLauncher:
         if choice == "1":
             toggle = input("Enable terminal colors? (y/n): ").strip().lower()
             if toggle in ["y", "yes"]:
-                global ENABLE_COLORS
                 ENABLE_COLORS = True
                 print("Terminal colors enabled.")
             elif toggle in ["n", "no"]:
@@ -166,7 +173,6 @@ class TrucoLauncher:
             try:
                 new_width = int(input("Enter new screen width (40-120): ").strip())
                 if 40 <= new_width <= 120:
-                    global SCREEN_WIDTH
                     SCREEN_WIDTH = new_width
                     print(f"Screen width set to {SCREEN_WIDTH}.")
                 else:
@@ -177,7 +183,6 @@ class TrucoLauncher:
             try:
                 new_delay = float(input("Enter new scroll delay (0.0-2.0 seconds): ").strip())
                 if 0.0 <= new_delay <= 2.0:
-                    global SCROLL_DELAY
                     SCROLL_DELAY = new_delay
                     print(f"Scroll delay set to {SCROLL_DELAY} seconds.")
                 else:
@@ -271,12 +276,6 @@ class TrucoLauncher:
         game = TrucoGame(num_players, enable_envido, enable_advisor)
         game.setup_game(player_name, ai_names, tutorial_level)
         game.play_game()
-
-
-# Global settings
-ENABLE_COLORS = True
-SCREEN_WIDTH = 80
-SCROLL_DELAY = 0.5
 
 
 if __name__ == "__main__":
