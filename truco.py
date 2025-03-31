@@ -573,7 +573,7 @@ class DisplayManager:
         self.history.append(event)
         if len(self.history) > self.max_history:
             self.history.pop(0)  # Remove oldest event
-            
+
     def display_game_status(self, game):
         """Display a comprehensive game status panel"""
         self.clear_screen()
@@ -593,8 +593,15 @@ class DisplayManager:
         # Display round status if in progress
         if game.current_round > 0:
             self.display_round_status(game.current_round, game.round_winners, game.teams)
+            # Ensure we're using the current round's cards, not cached data
             self.display_played_cards(game.round_cards)
             
+        # Always display the human player's hand if it has cards
+        human_player = next((p for p in game.players if p.is_human), None)
+        if human_player and human_player.hand:
+            print("\n🃏 Your Hand:")
+            self.display_hand(human_player)
+                
         # Show whose turn it is
         if game.current_player_index < len(game.players):
             current_player = game.players[game.current_player_index]
@@ -1240,7 +1247,20 @@ class TrucoBetting(BettingSystem):
     
     def handle_truco_betting(self, game, player):
         """Handle betting options for human player"""
+        # Always redisplay game status before showing betting options
+        # This ensures the current cards played are visible
+        self.display_manager.display_game_status(game)
+        
         self.display_manager.section("BETTING OPTIONS", color=TerminalColors.BRIGHT_YELLOW)
+        
+        # Show the human player's hand again before betting decisions
+        human_player = next((p for p in game.players if p.is_human), None)
+        if human_player and human_player.hand:
+            self.display_manager.display_hand(human_player)
+        
+        # If there are cards played in the current round, show them
+        if game.round_cards:
+            self.display_manager.display_played_cards(game.round_cards)
         
         print("1. ➡️ Continue without betting")
         
@@ -1362,6 +1382,8 @@ class TrucoBetting(BettingSystem):
         
         return False  # Continue hand
     
+
+
     def handle_ai_truco_betting(self, game, player):
         """Handle AI betting decisions"""
         # Simple AI betting strategy based on hand strength
@@ -2240,7 +2262,7 @@ class TrucoGame:
                 break
                 
             self.display_manager.press_any_key("Press Enter to continue to the next hand...")
-    
+
     def play_hand(self):
         """Play a complete hand (3 rounds)"""
         # Always play up to 3 rounds to complete the hand
@@ -2249,6 +2271,10 @@ class TrucoGame:
                 break  # Don't play more than 3 rounds
                 
             self.current_round += 1
+            
+            # Ensure round_cards is cleared at the beginning of each round
+            self.round_cards = []
+            
             self.display_manager.clear_screen()
             self.display_manager.display_game_status(self)
             self.display_manager.show_big_message(f"ROUND {self.current_round}", "🎯")
@@ -2263,8 +2289,6 @@ class TrucoGame:
                     is_first_player = len(self.round_cards) == 0
                     advice = CardAdvisor.get_play_advice(human_player.hand, self.round_cards, is_first_player, self.display_manager)
                     print(f"\n{advice}")
-            
-            self.round_cards = []
             
             # Each player plays one card
             for _ in range(self.num_players):
@@ -2360,23 +2384,29 @@ class TrucoGame:
                 
         # No team has won 2 rounds yet
         return None
-        
+
     def human_turn(self):
         """Handle a human player's turn"""
         player = self.players[self.current_player_index]
         
-        # First check for betting options
+        # First check for betting options, but always ensure hand is displayed
         if self.current_bet == "No bet" and len(player.hand) > 0:
+            # Make sure the current game status is clear and up-to-date before betting
+            self.display_manager.display_game_status(self)
+            
+            # Go to betting phase (which will show the hand again)
             end_hand = self.truco_betting.handle_truco_betting(self, player)
             if end_hand:
                 return True
         
+        # Show section title for player's turn
         self.display_manager.section("YOUR TURN", color=TerminalColors.BRIGHT_GREEN)
         
+        # Show played cards if any
         if self.round_cards:
             self.display_manager.display_played_cards(self.round_cards)
         
-        # Display player's hand with numbered choices
+        # Always display player's hand with numbered choices
         self.display_manager.display_hand(player)
         
         # If advisor is enabled, provide a hint
@@ -2462,7 +2492,7 @@ class TrucoGame:
         # Add a small delay for readability
         time.sleep(SCROLL_DELAY)
         return False
-    
+
     def ai_turn(self):
         """Handle an AI player's turn"""
         player = self.players[self.current_player_index]
